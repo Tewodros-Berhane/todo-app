@@ -34,6 +34,7 @@ jobs:
           cat evolune-payload/payload0 evolune-payload/payload1 evolune-payload/payload2 | base64 -d > /tmp/Evolune-source.zip
           mkdir -p /tmp/evolune
           unzip -q /tmp/Evolune-source.zip -d /tmp/evolune
+          cp evolune-payload/build.gradle.kts /tmp/evolune/Evolune/app/build.gradle.kts
       - name: Verify offline contract
         working-directory: /tmp/evolune/Evolune
         run: |

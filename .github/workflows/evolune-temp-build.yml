@@ -35,6 +35,24 @@ jobs:
           mkdir -p /tmp/evolune
           unzip -q /tmp/Evolune-source.zip -d /tmp/evolune
           cp evolune-payload/build.gradle.kts /tmp/evolune/Evolune/app/build.gradle.kts
+      - name: Patch source fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/evolune/Evolune/app/src/main/java/com/evolune/app/MainActivity.kt')
+          lines=p.read_text().splitlines()
+          for idx in sorted([310,358,407], reverse=True):
+              if idx <= len(lines) and lines[idx-1].strip() == '}':
+                  lines.pop(idx-1)
+          s='\n'.join(lines)+'\n'
+          s=s.replace('@Composable\nprivate fun AppTopBar', '@OptIn(ExperimentalMaterial3Api::class)\n@Composable\nprivate fun AppTopBar')
+          p.write_text(s)
+          p=Path('/tmp/evolune/Evolune/app/src/main/java/com/evolune/app/Storage.kt')
+          s=p.read_text()
+          s=s.replace('arrayOf(q.xpReward, it)) }', 'arrayOf<Any?>(q.xpReward.toLong(), it)) }')
+          s=s.replace('arrayOf(delta, it)) }', 'arrayOf<Any?>(delta.toLong(), it)) }')
+          p.write_text(s)
+          PY
       - name: Verify offline contract
         working-directory: /tmp/evolune/Evolune
         run: |

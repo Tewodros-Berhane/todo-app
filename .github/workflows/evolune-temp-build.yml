@@ -1,0 +1,54 @@
+name: Evolune Temp Build
+
+on:
+  push:
+    branches: [ "evolune-build-temp" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: evolune-build-temp
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: yes | sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Reconstruct source
+        run: |
+          cat evolune-payload/payload0 evolune-payload/payload1 evolune-payload/payload2 | base64 -d > /tmp/Evolune-source.zip
+          mkdir -p /tmp/evolune
+          unzip -q /tmp/Evolune-source.zip -d /tmp/evolune
+      - name: Verify offline contract
+        working-directory: /tmp/evolune/Evolune
+        run: |
+          ! grep -q 'android.permission.INTERNET' app/src/main/AndroidManifest.xml
+      - name: Unit tests
+        working-directory: /tmp/evolune/Evolune
+        run: gradle testDebugUnitTest --stacktrace
+      - name: Lint
+        working-directory: /tmp/evolune/Evolune
+        run: gradle lintDebug --stacktrace
+      - name: Build installable APK
+        working-directory: /tmp/evolune/Evolune
+        run: gradle assembleDebug --stacktrace
+      - name: Collect APK
+        run: cp /tmp/evolune/Evolune/app/build/outputs/apk/debug/app-debug.apk Evolune-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Evolune-APK
+          path: Evolune-debug.apk
+          if-no-files-found: error
+          retention-days: 7
